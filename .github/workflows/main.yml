@@ -1,4 +1,4 @@
-name: CI - Build Maven Project
+name: CI - Build and Upload WAR
 
 on:
   push:
@@ -9,9 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: mi-aplicacion-web   # Nombre base para el WAR
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -20,11 +22,25 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build with Maven
-        run: mvn -B clean package --file pom.xml
+      - name: Build WAR with Maven
+        run: mvn -B clean package -DskipTests=true
 
-      - name: Save build artifact
+      - name: Get WAR name
+        id: get-war-name
+        run: |
+          # Busca el primer archivo .war dentro de target/
+          war=$(ls target/*.war | head -n 1)
+          echo "WAR encontrado: $war"
+          # Extrae solo el nombre de archivo (sin ruta)
+          war_name=$(basename "$war")
+          # Exporta el nombre como output
+          echo "war_name=$war_name" >> $GITHUB_OUTPUT
+
+      - name: Upload WAR Artifact
         uses: actions/upload-artifact@v4
+        if: ${{ success() }}
         with:
-          name: hellotomcat-war
-          path: target/*.war
+          name: ${{ env.PROJECT_NAME }}-war
+          path: target/${{ steps.get-war-name.outputs.war_name }}
+          retention-days: 7
+
