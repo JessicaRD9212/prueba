@@ -28,6 +28,3 @@ jobs:
         with:
           name: hellotomcat-war
           path: target/*.war
-        with:
-          name: hellotomcat-war
-          path: target/*.war
