@@ -26,14 +26,8 @@ jobs:
       - name: Save build artifact
         uses: actions/upload-artifact@v4
         with:
-         name: hellotomcat-war
-         path: target/*.war
-
-
-
-
-
-        
+          name: hellotomcat-war
+          path: target/*.war
         with:
           name: hellotomcat-war
           path: target/*.war
