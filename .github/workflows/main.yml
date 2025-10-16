@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PROJECT_NAME: mi-aplicacion-web   # Nombre base para el WAR
+      PROJECT_NAME: mi-aplicacion-web
 
     steps:
       - name: Checkout
@@ -28,12 +28,9 @@ jobs:
       - name: Get WAR name
         id: get-war-name
         run: |
-          # Busca el primer archivo .war dentro de target/
           war=$(ls target/*.war | head -n 1)
           echo "WAR encontrado: $war"
-          # Extrae solo el nombre de archivo (sin ruta)
           war_name=$(basename "$war")
-          # Exporta el nombre como output
           echo "war_name=$war_name" >> $GITHUB_OUTPUT
 
       - name: Upload WAR Artifact
@@ -44,3 +41,33 @@ jobs:
           path: target/${{ steps.get-war-name.outputs.war_name }}
           retention-days: 7
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download built WAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mi-aplicacion-web-war
+          path: ./artifact
+
+      - name: Configure SSH key
+        run: |
+          echo "${{ secrets.TOMCAT_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: Upload WAR to Tomcat server
+        run: |
+          echo "Subiendo WAR al servidor Tomcat..."
+          scp -o StrictHostKeyChecking=no -i private_key.pem ./artifact/*.war ${{ secrets.TOMCAT_USER }}@${{ secrets.EC2_HOST }}:/opt/tomcat/webapps/
+
+      - name: Restart Tomcat remotely
+        run: |
+          echo "Reiniciando Tomcat..."
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.TOMCAT_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          sudo systemctl stop tomcat
+          sleep 5
+          sudo systemctl start tomcat
+          sudo systemctl status tomcat --no-pager
+          EOF
