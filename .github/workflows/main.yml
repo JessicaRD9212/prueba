@@ -1,4 +1,4 @@
-name: CI - Build and Upload WAR
+name: CI/CD - Build and Upload WAR
 
 on:
   push:
@@ -54,18 +54,18 @@ jobs:
 
       - name: Configure SSH key
         run: |
-          echo "${{ secrets.TOMCAT_KEY }}" > private_key.pem
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
       - name: Upload WAR to Tomcat server
         run: |
           echo "Subiendo WAR al servidor Tomcat..."
-          scp -o StrictHostKeyChecking=no -i private_key.pem ./artifact/*.war ${{ secrets.TOMCAT_USER }}@${{ secrets.EC2_HOST }}:/opt/tomcat/webapps/
+          scp -o StrictHostKeyChecking=no -i private_key.pem ./artifact/*.war ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }}:/opt/tomcat/webapps/
 
       - name: Restart Tomcat remotely
         run: |
           echo "Reiniciando Tomcat..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.TOMCAT_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }} << 'EOF'
           sudo systemctl stop tomcat
           sleep 5
           sudo systemctl start tomcat
