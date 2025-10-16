@@ -38,36 +38,44 @@ jobs:
         if: ${{ success() }}
         with:
           name: ${{ env.PROJECT_NAME }}-war
-          path: target/${{ steps.get-war-name.outputs.war_name }}
-          retention-days: 7
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download built WAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: mi-aplicacion-web-war
-          path: ./artifact
+    - name: Download built WAR artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: mi-aplicacion-web-war
+        path: ./artifact
 
-      - name: Configure SSH key
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
+    - name: Configure SSH key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
 
-      - name: Upload WAR to Tomcat server
-        run: |
-          echo "Subiendo WAR al servidor Tomcat..."
-          scp -o StrictHostKeyChecking=no -i private_key.pem ./artifact/*.war ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }}:/opt/tomcat/webapps/
+    - name: Upload WAR to EC2 (home directory)
+      run: |
+        echo "Subiendo WAR al servidor..."
+        scp -o StrictHostKeyChecking=no -i private_key.pem ./artifact/*.war \
+          ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }}:/home/${{ secrets.TOMCAT_USUARIO }}/
 
-      - name: Restart Tomcat remotely
-        run: |
-          echo "Reiniciando Tomcat..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }} << 'EOF'
+    - name: Deploy WAR into Tomcat
+      run: |
+        echo "Desplegando WAR en Tomcat..."
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.TOMCAT_USUARIO }}@${{ secrets.TOMCAT_HOST }} << 'EOF'
           sudo systemctl stop tomcat
-          sleep 5
+          sudo rm -rf /opt/tomcat/webapps/hellotomcat /opt/tomcat/webapps/hellotomcat.war
+          sudo mv /home/ec2-user/*.war /opt/tomcat/webapps/hellotomcat.war
+          sudo chown tomcat:tomcat /opt/tomcat/webapps/hellotomcat.war
           sudo systemctl start tomcat
+          sleep 5
           sudo systemctl status tomcat --no-pager
-          EOF
+        EOF
+
+
+          
+          path: target/${{ steps.get-war-name.outputs.war_name }}
+          retention-days: 7
+  
+  
