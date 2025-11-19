@@ -1,0 +1,11 @@
+name: CI Tomcat using Reusable Java CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    uses: JessicaRD9212/poc-workflows-java/.github/workflows/main.yml@main
+    with:
+      java-version: '17'
